@@ -674,6 +674,12 @@ detailed modules, please refer to Figures ~\ref{3}, ~\ref{4}, ~\ref{5}, ~\ref{6}
 Another  small  technical  difference  between  our  residual and non-residual Inception variants is that in the case of Inception-ResNet, we used batch-normalization only on top of the traditional layers, but not on top of the summations. It is reasonable to expect that a thorough use of batch-normalization  should be advantageous, but we wanted to keep each model replica trainable on a single GPU. It turned out that the memory footprint of layers with large activation size was consuming disproportionate amount of GPU memory. By omitting the batch-normalization on top of those layers, enable to increase the overall number
 of Inception blocks substantially. I hope that with better utilization of computing resources, making this trade-off will become unnecessary.\cite{DBLP:journals/corr/SzegedyIV16}
 
+\subsection{Scaling Residual blocks}
+\par It is found that if the number of filters exceeded 1000, the residual variants started to exhibit instabilities and the network has just died early in the training, meaning that the last layer before the average pooling started to produce only zeros after a few tens of thousands of iterations. This could not be prevented, neither by lowering the learning rate, nor by adding an extra batch-normalization to this layer. It is found that scaling down the residuals before adding them to the previous layer activation seemed to stabilize the
+training. In general we picked some scaling factors between 0.1 and 0.3 to scale the residuals before their being added to the accumulated layer activations refer Fig ~\ref{20}.A similar instability was observed in the case of very deep residual networks specifically VGG16 and VGG19, they suggested a two-phase training where the first “warm-up” phase is done with  very  low  learning  rate,  followed  by  a  second  phase with  high  learning  rate. It is found that if the number of filters is very high, then even a very low (0.00001) learning rate is not sufficient to cope with the instabilities and the training with high learning rate had a chance to destroy its effects. It is found it much more reliable to just scale the
+residuals. Even  where  the  scaling  was  not  strictly  necessary,  it
+never seemed to harm the final accuracy,  but it helped to stabilize the training.
+
 \subsection{Loss Functions}
 \par As mentioned earlier softmax is not suitable for obtaining discriminative features, different loss functions are experimented with inception-resnet-v2 architecture as follows,
 
@@ -757,20 +763,75 @@ in the colums of the paper parametrize the four convolutions of
 Figure ~\ref{7}}\label{table:number_of_filters}
 \end{table}
 
-\subsection{Clustering Approaches}
-\subsubsection{}
+\section{Clustering Approaches}
+For face embeddings obtained from trained neural network are consider as input for clustering faces, here i have analyzed five clustering approaches such as Scalable K-means \cite{bahmani2012scalable}, GMM \cite{cui2007easyalbum}, Rank order \cite{ho2003clustering}, DBSCAN \cite{schroff2015facenet}, DBSCAN + Kmeans \cite{tian2007face} and Chinese Whispers clustering \cite{biemann2006chinese}
 
+\subsection{K-Means}
+\par The k-means clustering algorithm alternates between assigning training examples to the nearest centroid and setting centroid to all the average of all assigned examples. Repeat till convergence:
 
+For every \textit{i}. set
+\begin{equation}
+c^{(i)} := argmin_{j}\left \| x^{(i)} - \mu _{j} \right \|^{2}
+\end{equation}
+For every \textit{j}. set
+\begin{equation}
+\mu _{j} := (\sum_{i=1}^{m} \{ c^{(i)}=j \}x^{(i)})/(\sum_{i=1}^{m} \{ c^{(i)}=j \})
+\end{equation}
+Centroids are typically initialized randomly, but we instead use k-means++ \cite{bahmani2012scalable} to choose initial centroids
 
+\subsection{Guassian Mixture Model(GMM)}
+\par We model each training example as originating from one of \textit{k} Gaussian  distributions. Formally, specification of the joint distribution will be $p(x^{(i)},z^{(i)}) = p(x^{(i)}|z^{(i)})p(z^{(i)})$ , where $z^{(i)}$ is Multinomial $\phi$ and $x^{(i)}|z^{(i)} = j$. This latent random variable $z^{(i)}$ can take one of k values and identifies the Guassian from which $x^{(i)}$ was drawn. Parameter initialization done using k-means because random initialization performed poorly in comparison. 
 
+The expectation-maximization algorithm is used to estimate parameters. The EM algorithm alternates between (E-step) and estimating the values of $z^{(i)}$ and (M-step) updating the parameters of model based on those estimates, formally,
 
+Repeat till convergence
 
+(E-Step) for each i,j, set
+\begin{equation}
+w_{j}^{(i)} := p(z^{(i)}=j|x^{(i)};\phi, \mu, \sum )
+\end{equation}
+\newline
+(M-step) update the parameters:
+\begin{equation}
+\phi _{j} := 1/m\sum_{i=1}^{m} w_{j}^{(i)}
+\end{equation}
 
+\begin{equation}
+\mu _{j} := (\sum_{i=1}^{m} w_{j}^{(i)}x^{(i)})/\sum_{i=1}^{m}w_{j}^{(i)}
+\end{equation}
 
+\begin{equation}
+\sum :=( \sum_{i=1}^{m} w_{j}^{(i)}(x^{(i)}-\mu _{j})(x^{(i)}-\mu _{j})^{T}) / (\sum_{i=1}^{m} w_{j}^{(i)})
+\end{equation}
 
+\subsection{Density based clustering(DB-SCAN)}
+\par The  objective  of  DBSCAN  is  to  cluster  together  high-density regions and mark low-density regions as noise. The algorithm takes two parameters: $\epsilon$,  a distance parameter, and \textit{minPts}, the minimum number of points required to
+form a dense region. For each training example \textit{x}, the algorithm then (1) retrieves all \textit{n} points within an radius of \textit{x} ,(2) either adds all
+\textit{n} points and their respective clusters to a new cluster if $\textit{n} \geq
+\textit{minPts}$ or marks \textit{x} as noise if \textit{n} < \textit{minPts}. Note that a point marked as noise can still be assigned to a future cluster. As a modification, initialization is done as, each training example as being its own unique assignment. Then instead of labeling a point as noise, simply leave its original assignment unchanged. This ensures that every face eventually gets assigned to some unique identity.  Moreover, we iteratively test out various epsilon values for optimization and choose the epsilon value which yields the highest silhouette coefficient as a parameter.
 
+\subsection{Rank Order Clustering}
+\par Rank-Order is a form of agglomerative hierarchical clustering, meaning all training examples initially represent different clusters and are iteratively merged together. In this specific implementation, below following distance metric is used:
+\begin{equation}
+D(a,b) = d(a,b) + d(b,a)/ min(O_{a}(b),O_{b}(a))
+\end{equation}
+where,
+\begin{equation}
+d(a,b) = \sum_{i=1}^{min(O_{a}(b),k)} I_{b}(O_{b}(f_{a}(i)),k)
+\end{equation}
+$f_{a}$ is the i-th nearest face to a, $O_{b}(f_{a}(i))$ gives the rank of face $f_{a}(i)$ in face b's neighbor list, and $I_{b}(x,k)$ is 0 if face \textit{x} is in face b's top \textit{k} nearest neighbors ans 1 otherwise.
 
+\par The  algorithm finds the k-nearest neighbors for each face \textit{a}, computes pairwise distances D(a,b) between \textit{a} and its top \textit{k} neighbors, and transitively merges all (a,b) with distances below a given threshold. It repeats
+these steps until no further pairwise distances fall below this threshold.
 
+\subsection{DBSCAN + K-means}
+\par In this novel algorithm, we run DBSCAN on top of clusters already produced by
+k-means.  In other words, initialization of each training example using the assignments given by k-means. When running k-means, choose an optimal $\epsilon$
+to break apart too-large clusters.  For each individual cluster generated by
+k-means, find optimal epsilon (based on silhouette coefficient) to run DB-SCAN on the cluster. Thus, each DBSCAN run is optimized for each individual cluster  and we achieve highly refined and distinct clusters. This provides an automated method to approximate the number of identities or clusters (i.e. k) in contrast to k-means.
+
+\subsection{Chinese Whispers Clustering}
+\par Chinese Whispers is a clustering method used in network science named after the famous whispering game. It has major implication in natural language processing. Chinese Whispers is a hard partitioning, randomized, flat clustering (no hierarchical relations between clusters) method. The random property means that running the process on the same network several times can lead to different results, while because of hard partitioning one node can only belong to one cluster at a given moment. The original algorithm is applicable to undirected, weighted and unweighted graphs. Chinese Whispers is time linear which means that it is extremely fast even if the number of nodes and links are very high in the network.\cite{biemann2006chinese} Here the modified version of this clustering algorithm is done. where embeddings from the neural net is gathered and every embedding is considered as node and edge is created for the nodes which are very closer each other measured using summation of least squared euclidean distance and high correlation between every embeddings in dataset.
 
 \newpage
 \chapter{Implementation}
