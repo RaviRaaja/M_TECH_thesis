@@ -341,7 +341,7 @@
 
 \begin{abstract}
 
-The ability to recognize and remember individuals is crucial task and has important implications for the evolution of human social behavior, particularly complex interactions between groups. Recently, the role of mass media in shaping public perceptions at scale has come under increasing scrutiny. Implementation of face recognition at large scale involves in face detection and feature extraction using deep convolutional neural network models for clustering the features. I evaluated the effectiveness of deep convolutional neural network architectures and clustering approaches both qualitative and quantitative metrics. However, the traditional softmax loss of deep CNNs usually lacks the power of discrimination. To address this problem recently several loss functions such as center loss, large margin softmax loss, large margin cosine loss have been proposed. All these improved losses shared same idea; maximizing inter-class variance and minimizing intra class variance. In this project I propose a method to deploy unsupervised face recognition using combination of above improved loss functions.
+The ability to recognize and remember individuals is crucial task and has important implications for the evolution of human social behavior, particularly complex interactions between groups. Recently, the role of mass media in shaping public perceptions at scale has come under increasing scrutiny. Implementation of face recognition at large scale involves in face detection and feature extraction using deep convolutional neural network models for clustering the features. I evaluated the effectiveness of deep convolutional neural network architectures and clustering approaches both qualitative and quantitative metrics. However, the traditional softmax loss of deep CNNs usually lacks the power of discrimination. To address this problem recently several loss functions such as center loss, large margin softmax loss, large margin cosine loss has been experimented. All these improved losses shared same idea; maximizing inter-class variance and minimizing intra class variance. In this project I propose a method to deploy unsupervised face recognition using combination of above improved loss functions and customized Deep CNN training methodology.
 \newline
 \newline
 \keywords{\textit{Face Recognition, Face Detection, Deep Convolutional Neural Networks, Center Loss, Large Margin Softmax Loss, Large Margin Cosine Loss, Softmax Loss.}}
@@ -427,7 +427,7 @@ In September 2012, the Internet Archive launched the TV News Archive, a reposito
   
 \begin{itemize}
 \item Deploying deep learning models as agile software is a challenging task. In this project, unsupervised face recognition system using deep convolutional neural networks is deployed with validation accuracy of 98\% on real time face images using tensorflow as back end pipeline for production. Implementation of combined discriminative learning objective functions like center loss with softmax \cite{wen2016discriminative}, triplet loss \cite{schroff2015facenet}, Quadruplet loss \cite{chen2017beyond} and margin cosine loss\cite{DBLP:journals/corr/abs-1801-09414} have been implemented to train the model and to produce better discriminative results.
-\item Implementation of wrapper module using python on MTCNN a novel face detection approach is performed in this project to capture the faces and align them irrespective of facial orientation and noise levels. \cite{xiang2017joint}
+\item Implementation of wrapper module using python on MTCNN a novel face detection approach is performed in this project to capture the faces from real time images and align them irrespective of facial orientation and noise levels given weights for pre-trained MTCNN model. \cite{xiang2017joint}
 \item Analysis of kmeans++ clustering, DBscan clustering, Guassian clustering models and Rank order clustering with silhoutte scores as inertia.
 \item Implementation of light weight graph based custom clustering technique has been deployed to solve problem of unsupervised face recognition in large scale. 
 \item Automatic intuitive training of deep convolutional neural network without over fitting the model. \cite{DBLP:journals/corr/CogswellAGZB15} 
@@ -436,7 +436,7 @@ In September 2012, the Internet Archive launched the TV News Archive, a reposito
 \end{itemize}
 	
 \section{Organization of the thesis}
-	Chapter~\ref{chap1} gives a brief introduction along with formal problem statement in section~\ref{prob} and motivation in section~\ref{moti} and the contributions of this work in section~\ref{contri}.
+	Chapter~\ref{chap1} gives a brief introduction along with formal problem statement in section~\ref{prob} and motivation in section~\ref{moti} and the contributions of this work in section~\ref{contri}. Chapter~\ref{chap2} tabulates the literature on research over unsupervised face recognition. Chapter~\ref{chap3} includes the proposed solution ,various deep CNN architecture experimented and Clustering approaches used. Chapter~\ref{chap4} Includes strategy on deployment of Deep CNN for unsupervised face recognition. Chapter~\ref{chap5} includes conclusion and further research ideas to extend the research.  
 	
 \newpage
 \chapter{Liturature Survey}
@@ -500,6 +500,7 @@ Zhang et al. \cite{zhang2016joint} & Multi Task cascade convolutional Neural Net
 
 \newpage
 \chapter{Proposed Solution}
+\label{chap3}
 \label{solution}
 \section{Overview}
 \par Semi supervised learning is the technique opted as first step to solve the problem of unsupervised face recognition. Semi supervised learning with respect to face recognition includes steps such as training standard face images with annotations. As mentioned earlier traditional softmax loss function will not make much impact in discriminating th facial features, usage of appropriate objective function and on training real-time cropped face images using deep convolutional neural network, which is also called as supervised learning. Dataset is trained until optimized validation accuracy is obtained. Cropped face images irrespective of its image features when passed into trained deep CNN to obtain embeddings and clustering those embeddings outputted from the Deep CNNs resulting as labels, with which respect to labels medoid is computed to represent the entire unique cluster. Face verification is performed by a forward pass of cropped face which has to be verified into Deep CNN to obtain embeddings and compare the confidence with all medoids and minimal threshold of confidence value obtained previously. Thus to improve the embeddings patterns to follow principle of high inter class variance and low intra class variance, deep CNN is re-trained in a supervised mode with obtained labels to get model tuned and to produce densely packed embeddings.
@@ -835,12 +836,181 @@ k-means, find optimal epsilon (based on silhouette coefficient) to run DB-SCAN o
 
 \newpage
 \chapter{Implementation}
+\label{chap4}
+\section{Siamese Training}
+\par Siamese neural network is a class of neural network architectures that contain two or more identical subnetworks. Identical here means they have the same configuration with the same parameters and weights. Parameter updating is mirrored across both subnetworks. Siamese NNs are popular among tasks that involve finding similarity or a relationship between two comparable things. Some examples are paraphrase scoring, where the inputs are two sentences and the output is a score of how similar they are; or signature verification, where figure out whether two signatures are from the same person. Generally, in such tasks, two identical subnetworks are used to process the two inputs, and another module will take their outputs and produce the final output. Siamese architectures are good in these tasks because sharing weights across subnetworks means fewer parameters to train for, which in turn means less data required and less tendency to overfit. Each subnetwork essentially produces a representation of its input. If your inputs are of the same kind, like matching two sentences or matching two pictures, it makes sense to use similar model to process similar inputs. This way you have representation vectors with the same semantics, making them easier to compare. \cite{bromley1993reputation}
+Siamese architecture refer fig\ref{siamese}
+
+
+\section{Deployment Overview}
+To understand the complete overview of the unsupervised face recognition project refer fig ~\ref{overview}. Initial steps involves face detection and preprocessing the face images, training Deep CNN with annotated images, obtaining embeddings from trained neural network, cluster the embeddings and obtain labels and finally, retrain the model for packing embeddings tighter.
+
+\begin{figure} [h]
+    \includegraphics[height=\textheight,width=\textwidth]{overview.jpg}
+    \caption{Overview of the Unsupervised face recognition}
+    \label{overview}
+\end{figure}
+
+\subsection{Face Detection}
+Pre-trained  multi-task  cascaded  convolutional neural  network (MTCNN)  is used   to  detect  and  align  the  faces \cite{zhang2014jointly}. The MTCNN framework uses a cascading  structure  with  three  stages  of  deep  convolutional networks that predict face and landmark location. Given an image, it is initially resized to different scales to build an image pyramid, which is given as the input for the three-stage cascaded framework. refer fig ~\ref{mtcnn} 
+\begin{itemize}
+\item In stage 1, a convolutional network called Proposal Network (P-Net) obtains the candidate windows and their bounding box regression vectors. After that, estimated bounding box regression vectors are used to calibrate the candidates.  Finally, a non-maximum suppression  (NMS)  is  used  to  merge  highly  overlapped candidates.
+\item In stage 2,  all candidates are inputted into a CNN, called Refine Network (R-Net), which further rejects a  large  number  of  false  candidates,  performs  calibration with bounding box regression, and NMS candidate merge.
+\item In stage 3, the network describes the face in more details and outputs five facial landmarks positions along with the aligned and cropped image. 
+\end{itemize}   
+\begin{figure} [h]
+\centering
+    \includegraphics[height=4cm,width=15cm]{mtcnn.png}
+    \caption{Overview of how MTCNN works}
+    \label{mtcnn}
+\end{figure}
+
+\subsection{Supervised Face Recognition}
+
+\subsubsection{Dataset Used}
+\par Initially, face images are cropped and passed into deep CNN for training, for training initially standard datasets are used. They are CASIA-WebFace dataset consists of total of 4,53,453 images over 10,575 identities after face detection. Some performance improvement has been seen if the dataset has been filtered before training. The best performing model has been trained initially on the VGGFace2 dataset consisting of ~3.3M faces and ~9000 classes. Refer figure for Accuracy and loss on training CASIA-webface dataset ~\ref{csia_acc}, ~\ref{csia_loss} and VGG Face2 dataset refer fig ~\ref{vggface_acc}, ~\ref{vggface_loss}. Refer table ~\ref{table:acc_} for the training accuracy results.
+
+
+
+
+
+
+
+\begin{figure}
+\centering
+\begin{minipage}[b]{0.4\textwidth}
+   \includegraphics[width=\textwidth]{csia_acc.png}
+    \caption{Training and Validation Accuracy on CASIA-webface Dataset}
+    \label{csia_acc}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{csia_loss.png}
+    \caption{Training and Validation Loss on CASIA-webface Dataset}
+    \label{csia_loss}
+  \end{minipage}
+\end{figure}
+
+\begin{figure}
+\centering
+\begin{minipage}[b]{0.4\textwidth}
+   \includegraphics[width=\textwidth]{vgg_acc.png}
+    \caption{Training and Validation Accuracy on VGG-face2 Dataset}
+    \label{vggface_acc}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{vgg_loss.png}
+    \caption{Training and Validation Loss on VGG-face2 Dataset}
+    \label{vggface_loss}
+  \end{minipage}
+\end{figure}
+\newpage
+
+\subsubsection{Algorithm for Training}
+\begin{algorithm}
+\caption{Algorithm for Training Deep CNN}
+\begin{algorithmic} 
+\STATE 1: Consider positive, anchor and negative images where positive and anchor are different instances of same person. Negative and anchor are images of different person.
+\STATE 2: Choosing completely different negative image makes the convergence slower so that after N epochs, distance matrix for all images in current minibatch is computed, and least distance with anchor and negative image is chosen. 
+\STATE 3: Training is performed by having two instance of Deep CNN model, where anchor and positive pairs, anchor and negative pairs are passed for training deep CNN. Refer fig\ref{triplet} results in learning process using triplet loss.
+\STATE 4: Usage of center loss after training with triplet loss made the model to learn the features fast and embeddings are converged soon, Architecture can be considered as adding few convolution and pooling blocks at end of Inception Resnet similar approach followed for Transfer learning the model.refer fig ~\ref{center} for modified architecture, where \textbf{C} is Convolutional Layer, \textbf{P} is Pooling Layer, \textbf{LC} is Locally Connected Layer and \textbf{FC} is Fully Connected Layer. Visualization of comparison of embeddings obtained trained using triplet loss and center loss. Refer fig ~\ref{embedding_vis}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\subsection{Clustering}
+\par Chinese whispers clustering algorithm is used to gather highly correlated face images. Refer the table ~\ref{table:cluster} for the comparative study of clustering algorithm used. Clustering algorithms executed over the training data containing 80k images and the highest-performing algorithm is executed over the testing data. Silhouette coefficient as our primary evaluation metric, where a higher silhouette coefficient is more preferred. This metric is defined for each sample \textit{x} as
+
+\begin{equation}
+s = (b-a)/max(a,b)
+\end{equation}
+
+\par where \textit{a} is the mean distance between \textit{x} and all other points
+assigned to the same centroid, and \textit{b} is the mean distance between \textit{x} and all other points of the next nearest cluster. Refer figure ~\ref{tsne} for the visualization of results after clustering.
+
+\subsubsection{T-SNE}
+A popular method for exploring high-dimensional data is something called t-SNE, introduced by van der Maaten and Hinton \cite{maaten2008visualizing} . The technique has become widespread in the field of machine learning, since it has an almost magical ability to create compelling two-dimensonal “maps” from data with hundreds or even thousands of dimensions. Tsne is used to visualize 128 dimensional vector obtained with labels as results of clustering.
+
+\begin{table}[h]
+  \centering
+\begin{tabular}{ |p{4cm}|p{4cm}|p{4cm}|}
+\hline
+Accuracy & Training dataset & Architecture\\
+\hline
+0.9905 & CASIA-WebFace & Inception ResNet v2 \\
+\hline
+0.9965 & VGGFace2 &	Inception ResNet v2 \\
+\hline
+\end{tabular}
+\caption{Accuracy on Public available datasets}\label{table:acc_}
+\end{table}
+
+
+\begin{table}[h]
+  \centering
+\begin{tabular}{ |p{1.5cm}|p{1.5cm}|p{3.5cm}|p{4cm}|p{2cm}|}
+\hline
+Accuracy & Test Accuracy & Algorithm & Tested On & \#Samples\\
+\hline
+0.98 & 0.96 & Chinese Whispers Clustering & Real-Time Dataset(IDrive Inc.) & 80k \\
+\hline
+0.84 & 0.65 & Scalable K means ++ Clustering & Real-Time Dataset & 50K \\
+\hline
+0.98 & 0.94 & Scalable K means ++ Clustering & CASIA and VGG Face2 & 80k \\
+\hline
+0.89 & NIL & GMM Clustering & VGG Face2 & 3.3M \\
+\hline
+0.61 & NIL & DBSCAN & VGG Face2 & 3.3M \\
+\hline
+\end{tabular}
+\caption{Clustering Accuracy}\label{table:cluster}
+\end{table}
+
+
+
+\begin{figure} [h]
+\centering
+    \includegraphics[height=6cm,width=10cm]{siamese.png}
+    \caption{Siamese Architecture}
+    \label{siamese}
+\end{figure}
+\begin{figure} [h]
+\centering
+    \includegraphics[height=5cm,width=15cm]{center.png}
+    \caption{Training model using center loss where input is embeddings obtained from Inception-Resnet-v2}
+    \label{center}
+\end{figure}
+\begin{figure}[h]
+\centering
+    \includegraphics[height=6cm,width=13cm]{Selection_034.png}
+    \caption{The Triplet Loss minimizes the distance between an anchor and a positive , both of which have the same identity, and maximizes the distance between the anchor and a negative of a different identity.}
+    \label{triplet}
+ 
+\end{figure}
+
+\begin{figure} [h]
+\centering
+    \includegraphics[height=7cm,width=10cm]{embeddings.png}
+    \caption{Embeddings visualization between triplet loss and center loss using tsne}
+    \label{embedding_vis}
+\end{figure}
+
+\begin{figure} [h]
+\centering
+    \includegraphics[height=7cm,width=10cm]{tsne_15k.png}
+    \caption{T-SNE visualization for 15K images as result of chinese whispers clustering}
+    \label{tsne}
+\end{figure}
 
 
 \newpage
-\chapter{Conclusion and Further Research Directions}
-\label{conclusion}
-
+\chapter{Conclusion}
+\label{chap5}
+\section{Conclusion and Further Research Directions}
+\par The model is deployed for handling streaming data where 100k images are uploaded every hour, while deploying the model big data engines are supposed to be used for scalability. Thus by retraining the model at different instance at nodes in cloud for every \textit{T} time period with labels obtained from results of clustering, more optimal and precise face recognition results can be produced. Usage of high quality digital sources to capture images reduces the error rate in training the neural network. This research can be extended by usage of variational auto encoders or generative model to simulate and understand peoples feeling through facial expressions which adds up a factor in understanding the patterns of people behavior by Government and Business Agencies. Deep CNN model can be fine tuned to learn the behavior of primates in forests and which in turn results in understanding the ecosystem.  
 	
 
 \bibliographystyle{apalike}
